@@ -20,6 +20,7 @@ function GradebookSpreadsheet($spreadsheet) {
   this.setupFixedTableHeader();
   this.setupColumnDragAndDrop();
   this.setupToolbar();
+  this.setupNotificationSystem();
 };
 
 
@@ -527,6 +528,11 @@ GradebookSpreadsheet.prototype.setupToolbar = function() {
 };
 
 
+GradebookSpreadsheet.prototype.setupNotificationSystem = function() {
+  this.notificationSystem = new GradebookNotificationSystem(this);
+};
+
+
 /*************************************************************************************
  * GradebookEditableCell - behaviour for editable cells
  */
@@ -769,6 +775,69 @@ GradebookToolbar.prototype.setupToggleCategories = function() {
     return false;
   })
 }
+
+
+/**************************************************************************************
+ * GradebookNotificationSystem - provides an API to display notifications to the user
+ */
+function GradebookNotificationSystem(gradebookSpreadsheet) {
+  this.gradebookSpreadsheet = gradebookSpreadsheet;
+
+  this.$container = $("<div id='gradebookNotifications'>");
+  this.gradebookSpreadsheet.$spreadsheet.prepend(this.$container);
+};
+
+
+GradebookNotificationSystem.prototype.notify = function(message, $cell, type, sticky) {
+  var self = this;
+
+  var $n = $("<div>").addClass("gb-notification").addClass(type).hide();
+  $n.html(message);
+
+  if (sticky) {
+    var $x = $("<span>").addClass("gb-notification-x");
+    $x.on("click", function() {
+      self.hideNotification($n);
+    });
+    $n.append($x);
+  } else {
+    setTimeout(function() {
+      self.hideNotification($n);
+    }, 3000);
+  }
+
+  self.$container.prepend($n);
+  $n.slideDown();
+
+  $cell.data("currentGradebookNotification", $n);
+  $n.data("gradebookCell", $cell);
+};
+
+
+GradebookNotificationSystem.prototype.notifySuccess = function(message, $cell) {
+  this.notify(message, $cell, "gb-notification-success", true);
+};
+
+
+GradebookNotificationSystem.prototype.notifyError = function(message, $cell) {
+  this.notify(message, $cell, "gb-notification-error", true);
+};
+
+
+GradebookNotificationSystem.prototype.hideNotification = function($notification) {
+  if ($notification && $notification.length > 0) {
+    $notification.slideUp(function() {
+      $nofication.remove();
+      if ($nofication.data("gradebookCell")) {
+        $nofication.data("gradebookCell").data("currentGradebookNotification", null);
+      }
+    });
+  }
+};
+
+GradebookNotificationSystem.prototype.hideNotificationForCell = function($cell) {
+  this.hideNotification($cell.data("currentGradebookNotification"));
+};
 
 
 /**************************************************************************************
