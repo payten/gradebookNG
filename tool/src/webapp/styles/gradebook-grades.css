@@ -244,6 +244,24 @@
 #filterByGroup {
   line-height: 1em;
 }
+/* Notifications */
+#gradebookNotifications {
+  position: fixed;
+  left: 50%;
+  top: 10px;
+  margin-left: -300px;
+  width: 600px;
+  z-index: 1000;
+  opacity: 0.95;
+}
+#gradebookNotifications .gb-notification {
+  background-color: #EEE;
+  border: 1px solid #AAA;
+  padding: 4px;
+  width: 100%;
+  margin-bottom: 4px;
+  text-align: center;
+}
 /* Wicket Overrides */
 div.wicket-modal div.w_content_3 {
 	border: none; /** don't want border wrapping content inside the modal **/
