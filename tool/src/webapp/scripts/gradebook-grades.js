@@ -866,6 +866,79 @@ GradebookNotificationSystem.prototype.hideNotificationForCell = function($cell) 
 
 
 /**************************************************************************************
+ * GradebookWicketEventProxy - proxy any Wicket events to the Gradebook Spreadsheet
+ */
+
+GradebookWicketEventProxy = {
+  updateLabel : {
+    handleBeforeSend: function(componentId, attrs, jqXHR, settings) {
+      console.log("GradebookWicketEventProxy.updateLabel.handleBeforeSend");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(settings);
+    },
+    handleSuccess : function(componentId, attrs, jqXHR, data, textStatus) {
+      console.log("GradebookWicketEventProxy.updateLabel.handleSuccess");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(data);
+      console.log(textStatus);
+    },
+    handleFailure : function(componentId, attrs, jqXHR, errorMessage, textStatus) {
+      console.log("GradebookWicketEventProxy.updateLabel.handleFailure");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(errorMessage);
+      console.log(textStatus);
+    },
+    handleComplete : function(componentId, attrs, jqXHR, textStatus) {
+      console.log("GradebookWicketEventProxy.updateLabel.handleComplete");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(textStatus);
+    }
+  },
+  updateEditor : {
+    handleBeforeSend: function(componentId, attrs, jqXHR, settings) {
+      console.log("GradebookWicketEventProxy.updateEditor.handleBeforeSend");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(settings);
+    },
+    handleSuccess : function(componentId, attrs, jqXHR, data, textStatus) {
+      console.log("GradebookWicketEventProxy.updateEditor.handleSuccess");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(data);
+      console.log(textStatus);
+    },
+    handleFailure : function(componentId, attrs, jqXHR, errorMessage, textStatus) {
+      console.log("GradebookWicketEventProxy.updateEditor.handleFailure");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(errorMessage);
+      console.log(textStatus);
+    },
+    handleComplete : function(componentId, attrs, jqXHR, textStatus) {
+      console.log("GradebookWicketEventProxy.updateEditor.handleComplete");
+      console.log(componentId);
+      console.log(attrs);
+      console.log(jqXHR);
+      console.log(textStatus);
+    }
+  },
+};
+
+
+
+/**************************************************************************************
  * GradebookAPI - all the backend calls in one happy place
  */
 GradebookAPI = {};

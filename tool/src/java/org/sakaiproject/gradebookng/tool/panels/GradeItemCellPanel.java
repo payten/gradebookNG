@@ -76,21 +76,21 @@ public class GradeItemCellPanel extends Panel {
         AjaxCallListener myAjaxCallListener = new AjaxCallListener() {
           @Override
           public CharSequence getBeforeSendHandler(Component component) {
-            return "console.log(\"updateLabelAjaxAttributes::I\'m executed before the firing of the Ajax call\")";
+            return "GradebookWicketEventProxy.updateLabel.handleBeforeSend('" + component.getMarkupId() + "', attrs, jqXHR, settings);";
           }
 
           @Override
           public CharSequence getSuccessHandler(Component component) {
-            return "console.log(\"updateLabelAjaxAttributes::I\'m executed on successful Ajax call\")";
+            return "GradebookWicketEventProxy.updateLabel.handleSuccess('" + component.getMarkupId() + "', attrs, jqXHR, data, textStatus);";
           }
 
           @Override
           public CharSequence getFailureHandler(Component component) {
-            return "console.log(\"updateLabelAjaxAttributes::I\'m executed on failed Ajax call\")";
+            return "GradebookWicketEventProxy.updateLabel.handleFailure('" + component.getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
           }
           @Override
           public CharSequence getCompleteHandler(Component component) {
-            return "console.log(\"updateLabelAjaxAttributes::I\'m executed on completed Ajax call\")";
+            return "GradebookWicketEventProxy.updateLabel.handleComplete('" + component.getMarkupId() + "', attrs, jqXHR, textStatus);";
           }
         };
         attributes.getAjaxCallListeners().add(myAjaxCallListener);
@@ -107,21 +107,21 @@ public class GradeItemCellPanel extends Panel {
         AjaxCallListener myAjaxCallListener = new AjaxCallListener() {
           @Override
           public CharSequence getBeforeSendHandler(Component component) {
-            return "console.log(\"updateEditorAjaxAttributes::I\'m executed before the firing of the Ajax call\")";
+            return "GradebookWicketEventProxy.updateEditor.handleBeforeSend('" + component.getMarkupId() + "', attrs, jqXHR, settings);";
           }
 
           @Override
           public CharSequence getSuccessHandler(Component component) {
-            return "console.log(\"updateEditorAjaxAttributes::I\'m executed on successful Ajax call\")";
+            return "GradebookWicketEventProxy.updateEditor.handleSuccess('" + component.getMarkupId() + "', attrs, jqXHR, data, textStatus);";
           }
 
           @Override
           public CharSequence getFailureHandler(Component component) {
-            return "console.log(\"updateEditorAjaxAttributes::I\'m executed on failed Ajax call\")";
+            return "GradebookWicketEventProxy.updateEditor.handleFailure('" + component.getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
           }
           @Override
           public CharSequence getCompleteHandler(Component component) {
-            return "console.log(\"updateEditorAjaxAttributes::I\'m executed on completed Ajax call\")";
+            return "GradebookWicketEventProxy.updateEditor.handleComplete('" + component.getMarkupId() + "', attrs, jqXHR, textStatus);";
           }
         };
         attributes.getAjaxCallListeners().add(myAjaxCallListener);
