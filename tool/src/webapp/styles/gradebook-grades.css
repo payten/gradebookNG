@@ -99,7 +99,12 @@
   min-height: 40px;
 }
 /* Distinguish Fixed Columns */
-#gradebookGrades table tr > :nth-child(2) {
+#gradebookGrades table thead tr > th:nth-child(2),
+#gradebookGrades table tbody tr > td:nth-child(2) {
+  border-right: 2px solid #AAA;
+}
+/* Categories */
+#gradebookGrades table tr.gb-categories-row > td:nth-child(1) {
   border-right: 2px solid #AAA;
 }
 /* Table Cells */

@@ -585,6 +585,61 @@ GradebookSpreadsheet.prototype._cloneCell = function($cell) {
 };
 
 
+GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
+  var self = this;
+  self.categoriesMap = {};
+  self.originalOrder = [];
+
+  self.$table.find("thead tr th.gb-grade-item-header").each(function() {
+    var $th = $(this);
+    var model = $th.data("model");
+    var category = model.getCategory();
+
+    self.originalOrder.push(model);
+
+    self.categoriesMap[category] = self.categoriesMap[category] || [];
+    self.categoriesMap[category].push(model);
+  });
+
+
+  var currentCategory, newColIndex = 2;
+  var $categoriesRow = $("<tr>").append($("<td>").attr("colspan", 2)).addClass("gb-categories-row");
+
+  for (category in self.categoriesMap) {
+    if (!self.categoriesMap.hasOwnProperty(category)) {
+        continue;
+    }
+
+    var cellsForCategory = self.categoriesMap[category];
+
+    $categoriesRow.append($("<td>").addClass("gb-category-header").
+                                    attr("colspan", cellsForCategory.length).
+                                    text(category));
+
+    $.each(cellsForCategory, function(i, model) {
+      model.moveColumnTo(newColIndex)
+      newColIndex++;
+    });
+  }
+
+  self.$table.find("thead").prepend($categoriesRow);
+};
+
+
+GradebookSpreadsheet.prototype.disableGroupByCategory = function() {
+  var self = this;
+
+  // remove the category header row
+  self.$table.find(".gb-categories-row").remove();
+
+  // reorder based on self.originalOrder
+  for(i=0,newColIndex=2; i < self.originalOrder.length; i++,newColIndex++) {
+    model = self.originalOrder[i];
+    model.moveColumnTo(newColIndex);
+  }
+};
+
+
 /*************************************************************************************
  * GradebookEditableCell - behaviour for editable cells
  */
@@ -784,6 +839,34 @@ GradebookHeaderCell.prototype.truncateTitle = function() {
 };
 
 
+GradebookHeaderCell.prototype.getCategory = function() {
+  var category = null;
+
+  if (this.$cell.hasClass("gb-grade-item-header")) {
+    category = this.$cell.find("[data-category]").data("category");
+  }
+
+  return category || "Uncategorized";
+};
+
+
+GradebookHeaderCell.prototype.moveColumnTo = function(newIndex) {
+  var self = this;
+
+  var currentIndex = self.$cell.index();
+
+  // reorder the header cell
+  $(self.getRow().children().get(newIndex)).before(self.$cell);
+
+  // reorder the tbody cells
+  self.gradebookSpreadsheet.$table.find("tbody tr").each(function() {
+      var $tr = $(this);
+      $tr.find("td:eq(" + newIndex + ")").before($tr.find("td:eq("+currentIndex+")"));
+  });
+};
+
+
+
 /**************************************************************************************
  * GradebookToolbar - all the toolbar actions
  */
@@ -819,10 +902,18 @@ GradebookToolbar.prototype.setupToggleGradeItems = function() {
 
 
 GradebookToolbar.prototype.setupToggleCategories = function() {
-  this.$toolbar.on("click", "#toggleCategoriesToolbarItem", function(event) {
+  var self = this;
+
+  self.$toolbar.on("click", "#toggleCategoriesToolbarItem", function(event) {
     event.preventDefault();
 
     $(this).toggleClass("on");
+
+    if ($(this).hasClass("on")) {
+      self.gradebookSpreadsheet.enableGroupByCategory();
+    } else {
+      self.gradebookSpreadsheet.disableGroupByCategory();
+    }
 
     return false;
   })
