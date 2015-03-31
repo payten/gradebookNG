@@ -588,6 +588,7 @@ GradebookSpreadsheet.prototype._cloneCell = function($cell) {
 GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
   var self = this;
   self.categoriesMap = {};
+  self.categories = [];
   self.originalOrder = [];
 
   self.$table.find("thead tr th.gb-grade-item-header").each(function() {
@@ -599,17 +600,27 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
 
     self.categoriesMap[category] = self.categoriesMap[category] || [];
     self.categoriesMap[category].push(model);
+
+    if ($.inArray(category, self.categories) == -1) {
+      self.categories.push(category);
+    }
   });
 
+
+  self.categories = self.categories.sort(function(a, b) {
+    if (a == "Uncategorized") {
+      return 1;
+    } else if (b == "Uncategorized") {
+      return -1;
+    }
+
+    return a > b
+  })
 
   var currentCategory, newColIndex = 2;
   var $categoriesRow = $("<tr>").append($("<td>").attr("colspan", 2)).addClass("gb-categories-row");
 
-  for (category in self.categoriesMap) {
-    if (!self.categoriesMap.hasOwnProperty(category)) {
-        continue;
-    }
-
+  $.each(self.categories, function(i, category) {
     var cellsForCategory = self.categoriesMap[category];
 
     $categoriesRow.append($("<td>").addClass("gb-category-header").
@@ -620,7 +631,7 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
       model.moveColumnTo(newColIndex)
       newColIndex++;
     });
-  }
+  });
 
   self.$table.find("thead").prepend($categoriesRow);
 };

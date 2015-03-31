@@ -107,6 +107,10 @@
 #gradebookGrades table tr.gb-categories-row > td:nth-child(1) {
   border-right: 2px solid #AAA;
 }
+#gradebookGrades .gb-categories-row td {
+  text-align: center;
+  background: #e6e6e6;
+}
 /* Table Cells */
 #gradebookGrades tbody td.gb-cell {
   height: 2.6em;
