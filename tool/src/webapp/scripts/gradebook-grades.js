@@ -346,6 +346,8 @@ GradebookSpreadsheet.prototype.setupFixedTableHeader = function(reset) {
     $(document).scrollTop(self.$table.offset().top - 10);
     var $target = $(self.$table.find("thead tr th").get($(this).index()));
 
+    self.$spreadsheet.data("activeCell", $target);
+
     // attempt to proxy to elements in the original cell
     if (!self.proxyEventToElementsInOriginalCell(event, $target)) {
       // if false, proxy through the event to start up a drag action
@@ -478,6 +480,8 @@ GradebookSpreadsheet.prototype.setupFixedColumns = function() {
     self.$spreadsheet.scrollLeft(0);
     var $targetCell = $(self.$table.find("thead tr th").get($(this).index()));
 
+    self.$spreadsheet.data("activeCell", $targetCell);
+
     // attempt to proxy to elements in the original cell
     if (!self.proxyEventToElementsInOriginalCell(event, $targetCell)) {
       // otherwise just focus the original cell
@@ -492,6 +496,8 @@ GradebookSpreadsheet.prototype.setupFixedColumns = function() {
     var cellIndex = $(this).index();
     var rowIndex = $(this).closest("tr").index();
     $targetCell = $($(self.$table.find("tbody tr").get(rowIndex)).find("td").get(cellIndex));
+
+    self.$spreadsheet.data("activeCell", $targetCell);
 
     // attempt to proxy to elements in the original cell
     if (!self.proxyEventToElementsInOriginalCell(event, $targetCell)) {
@@ -545,11 +551,24 @@ GradebookSpreadsheet.prototype.enableAbsolutePositionsInCells = function() {
 GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
   var self = this;
 
-  self.$table.dragtable({
+  self.find(".gb-grade-item-header").on("mousedown", function() {
+    self.$spreadsheet.data("activeCell", $(this));
+    return true;
+  });
+
+  var myDragTable = self.$table.dragtable({
     maxMovingRows: 1,
     clickDelay: 200, // give the user 200ms to perform a click or actually get their drag on
     dragaccept: '.gb-grade-item-header',
     excludeFooter: true,
+    beforeStart: function(dragTable) {
+      if (self.$spreadsheet.hasClass("gb-grouped-by-category")) {
+        var scope = self.$spreadsheet.data("activeCell").data("categoryDragScope");
+        this.dragaccept = scope; // restrict drop to category
+      } else {
+        this.dragaccept = ".gb-grade-item-header"; // allow drop anywhere
+      }
+    },
     beforeStop: function(dragTable) {
       self.$table.find("thead th").get(dragTable.endIndex - 1).focus();
     },
@@ -634,8 +653,12 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
                                     attr("colspan", cellsForCategory.length).
                                     text(category));
 
-    $.each(cellsForCategory, function(i, model) {
-      model.moveColumnTo(newColIndex)
+    $.each(cellsForCategory, function(_, model) {
+      model.moveColumnTo(newColIndex);
+
+      var categoryDragScope = "gb-category-"+i; // used to scope drag and drop when grouped
+      model.$cell.addClass(categoryDragScope).data("categoryDragScope", "." + categoryDragScope);
+
       newColIndex++;
     });
   });
@@ -643,6 +666,7 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
   self.$table.find("thead").prepend($categoriesRow);
   self.$spreadsheet.addClass("gb-grouped-by-category");
   self.refreshFixedTableHeader(true);
+  self.$spreadsheet.trigger("scroll"); // force redraw of the fixed columns
 };
 
 
@@ -660,6 +684,7 @@ GradebookSpreadsheet.prototype.disableGroupByCategory = function() {
 
   self.$spreadsheet.removeClass("gb-grouped-by-category");
   self.refreshFixedTableHeader(true);
+  self.$spreadsheet.trigger("scroll"); // force redraw of the fixed columns
 };
 
 GradebookSpreadsheet.prototype.find = function() {
