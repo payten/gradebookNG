@@ -12,6 +12,13 @@ function GradebookSpreadsheet($spreadsheet) {
   // all the Grade Item cell models keyed on studentUuid, then assignmentId
   this._GRADE_CELLS = {};
 
+  // categories and ordering
+  this._CATEGORIES_MAP = {}; // header models keyed on their category
+  this._ALL_CATEGORIES = []; // category strings in an alpha sorted list
+  this._COLUMN_ORDER = [];   // the order of the columns when categories aren't enabled
+
+
+  // set it all up
   this.setupWicketAJAXEventHandler();
   this.setupGradeItemCellModels();
   this.enableAbsolutePositionsInCells();
@@ -20,6 +27,8 @@ function GradebookSpreadsheet($spreadsheet) {
   this.setupFixedTableHeader();
   this.setupColumnDragAndDrop();
   this.setupToolbar();
+
+  this._refreshOrders();
 };
 
 
@@ -551,6 +560,47 @@ GradebookSpreadsheet.prototype.enableAbsolutePositionsInCells = function() {
 GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
   var self = this;
 
+  function updateOrderingAfterDrop(droppedCellModel) {
+    if (self.$spreadsheet.hasClass("gb-grouped-by-category")) {
+      var categoryScope = droppedCellModel.categoryDragScope;
+      var category = droppedCellModel.getCategory();
+
+      if (self._CATEGORIES_MAP[category].length == 1) {
+        return; // only 1 in the category so don't need to change order
+      }
+
+      var $cellsInCategory = self.$table.find("." + categoryScope);
+
+      var oldSiblingsIndex = $.inArray(droppedCellModel, self._CATEGORIES_MAP[category]);
+      var newSiblingsIndex = $cellsInCategory.index(droppedCellModel.$cell);
+
+      if (oldSiblingsIndex == newSiblingsIndex) {
+        // no change in order
+        return;
+      }
+
+      var oldRealIndex = $.inArray(droppedCellModel, self._COLUMN_ORDER);
+
+      // drop it from the order arrays
+      self._COLUMN_ORDER.splice(oldRealIndex, 1);
+      self._CATEGORIES_MAP[category].splice(oldSiblingsIndex, 1);
+
+      if (newSiblingsIndex < oldSiblingsIndex) { // moved to the left
+        var closestSiblingOnRightIndex = $.inArray(droppedCellModel.$cell.next().data("model"), self._COLUMN_ORDER);
+
+        self._COLUMN_ORDER.splice(closestSiblingOnRightIndex, 0, droppedCellModel);
+      } else { // moved to the right
+        var closestSiblingOnLeftIndex = $.inArray(droppedCellModel.$cell.prev().data("model"), self._COLUMN_ORDER);
+
+        self._COLUMN_ORDER.splice(closestSiblingOnLeftIndex + 1, 0, droppedCellModel);
+      }
+      var retainColumnOrder = true;
+      self._refreshOrders(retainColumnOrder);
+    } else {
+      self._refreshOrders();
+    }
+  };
+
   self.find(".gb-grade-item-header").on("mousedown", function() {
     self.$spreadsheet.data("activeCell", $(this));
     return true;
@@ -563,24 +613,30 @@ GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
     excludeFooter: true,
     beforeStart: function(dragTable) {
       if (self.$spreadsheet.hasClass("gb-grouped-by-category")) {
-        var scope = self.$spreadsheet.data("activeCell").data("categoryDragScope");
-        this.dragaccept = scope; // restrict drop to category
+        var scope = self.$spreadsheet.data("activeCell").data("model").categoryDragScope;
+        this.dragaccept = "." + scope; // restrict drop to category
       } else {
         this.dragaccept = ".gb-grade-item-header"; // allow drop anywhere
       }
     },
     beforeStop: function(dragTable) {
-      self.$table.find("thead th").get(dragTable.endIndex - 1).focus();
+      var newIndex = dragTable.endIndex - 1; // reset to 0-based count
+      var $header = $(self.$table.find("thead th").get(newIndex));
+      var model = $header.data("model");
+
+      self.$table.find("thead th").get(newIndex).focus();
+      updateOrderingAfterDrop(model);
     },
     persistState: function(dragTable) {
       var newIndex = dragTable.endIndex - 1; // reset to 0-based count
       var $header = $(self.$table.find("thead th").get(newIndex));
+      var model = $header.data("model");
 
       // determine the new position of the grade item in relation to other grade items
-      var order = self.$table.find("thead th.gb-grade-item-header").index($header);
+      var order = $.inArray(model, self._COLUMN_ORDER);
 
       GradebookAPI.updateAssignmentOrder(self.$table.data("siteid"),
-                                         $header.data("model").columnKey,
+                                         model.columnKey,
                                          order);
 
       // refresh the fixed header
@@ -613,41 +669,12 @@ GradebookSpreadsheet.prototype._cloneCell = function($cell) {
 
 GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
   var self = this;
-  self.categoriesMap = {};
-  self.categories = [];
-  self.originalOrder = [];
-
-  self.$table.find("thead tr th.gb-grade-item-header").each(function() {
-    var $th = $(this);
-    var model = $th.data("model");
-    var category = model.getCategory();
-
-    self.originalOrder.push(model);
-
-    self.categoriesMap[category] = self.categoriesMap[category] || [];
-    self.categoriesMap[category].push(model);
-
-    if ($.inArray(category, self.categories) == -1) {
-      self.categories.push(category);
-    }
-  });
-
-
-  self.categories = self.categories.sort(function(a, b) {
-    if (a == "Uncategorized") {
-      return 1;
-    } else if (b == "Uncategorized") {
-      return -1;
-    }
-
-    return a > b
-  })
 
   var currentCategory, newColIndex = 2;
   var $categoriesRow = $("<tr>").append($("<td>").attr("colspan", 2)).addClass("gb-categories-row");
 
-  $.each(self.categories, function(i, category) {
-    var cellsForCategory = self.categoriesMap[category];
+  $.each(self._ALL_CATEGORIES, function(i, category) {
+    var cellsForCategory = self._CATEGORIES_MAP[category];
 
     $categoriesRow.append($("<td>").addClass("gb-category-header").
                                     attr("colspan", cellsForCategory.length).
@@ -657,7 +684,8 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
       model.moveColumnTo(newColIndex);
 
       var categoryDragScope = "gb-category-"+i; // used to scope drag and drop when grouped
-      model.$cell.addClass(categoryDragScope).data("categoryDragScope", "." + categoryDragScope);
+      model.$cell.addClass(categoryDragScope);
+      model.categoryDragScope = categoryDragScope;
 
       newColIndex++;
     });
@@ -677,8 +705,8 @@ GradebookSpreadsheet.prototype.disableGroupByCategory = function() {
   self.$table.find(".gb-categories-row").remove();
 
   // reorder based on self.originalOrder
-  for(i=0,newColIndex=2; i < self.originalOrder.length; i++,newColIndex++) {
-    model = self.originalOrder[i];
+  for(i=0,newColIndex=2; i < self._COLUMN_ORDER.length; i++,newColIndex++) {
+    model = self._COLUMN_ORDER[i];
     model.moveColumnTo(newColIndex);
   }
 
@@ -689,6 +717,41 @@ GradebookSpreadsheet.prototype.disableGroupByCategory = function() {
 
 GradebookSpreadsheet.prototype.find = function() {
   return this.$spreadsheet.find.apply(this.$spreadsheet, arguments);
+}
+
+
+GradebookSpreadsheet.prototype._refreshOrders = function(retainColumnOrder) {
+  var self = this;
+
+  self._CATEGORIES_MAP = {};
+  self._ALL_CATEGORIES = [];
+
+  if (!retainColumnOrder) {
+    self._COLUMN_ORDER = self.$table.find("thead tr th.gb-grade-item-header").map(function() {
+      return $(this).data("model");
+    });;
+  }
+
+  $.each(self._COLUMN_ORDER, function(i, model) {
+    var category = model.getCategory();
+
+    self._CATEGORIES_MAP[category] = self._CATEGORIES_MAP[category] || [];
+    self._CATEGORIES_MAP[category].push(model);
+
+    if ($.inArray(category, self._ALL_CATEGORIES) == -1) {
+      self._ALL_CATEGORIES.push(category);
+    }
+  });
+
+  self._ALL_CATEGORIES = self._ALL_CATEGORIES.sort(function(a, b) {
+    if (a == "Uncategorized") {
+      return 1;
+    } else if (b == "Uncategorized") {
+      return -1;
+    }
+
+    return a > b
+  });
 }
 
 
