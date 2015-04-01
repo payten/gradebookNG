@@ -246,7 +246,7 @@ GradebookSpreadsheet.prototype.ensureCellIsVisible = function($cell) {
   var self= this;
 
   // check input is visible on x-scroll
-  var fixedColWidth = self.$spreadsheet.find(".gb-fixed-columns-table").width();
+  var fixedColWidth = self.find(".gb-fixed-columns-table").width();
   if  ($cell[0].offsetLeft - self.$spreadsheet[0].scrollLeft < fixedColWidth) {
     self.$spreadsheet[0].scrollLeft = $cell[0].offsetLeft - fixedColWidth;
   }
@@ -303,8 +303,8 @@ GradebookSpreadsheet.prototype.handleInputTab = function(event, $cell) {
 
 GradebookSpreadsheet.prototype.getHeader = function() {
   // if floating, return the floating header
-  if (this.$spreadsheet.find(".gb-fixed-header-table:visible").length > 0) {
-    return this.$spreadsheet.find(".gb-fixed-header-table:visible");
+  if (this.find(".gb-fixed-header-table:visible").length > 0) {
+    return this.find(".gb-fixed-header-table:visible");
   }
 
   // otherwise, return the fixed header
@@ -317,7 +317,7 @@ GradebookSpreadsheet.prototype.setupFixedTableHeader = function(reset) {
 
   if (reset) {
     // delete the existing header and initialize a new one
-    self.$spreadsheet.find(".gb-fixed-header-table").remove();
+    self.find(".gb-fixed-header-table").remove();
   };
 
   var $header = self.$table.find("thead", "tr");
@@ -370,7 +370,14 @@ GradebookSpreadsheet.prototype.setupFixedColumns = function() {
   var $fixedColumns = $("<table>").attr("class", self.$table.attr("class")).addClass("gb-fixed-columns-table").hide();
 
   var $headers = self.$table.find("thead th:not(.gb-grade-item-header)");
-  $fixedColumnsHeader.append($("<thead>").append("<tr>"));
+  var $thead = $("<thead>");
+  // append a dummy header row for when categorised
+  $thead.append($("<tr>").addClass("gb-categories-row").append($("<td>").attr("colspan", $headers.length)));
+
+  // add the row for all cloned cells
+  $thead.append($("<tr>").addClass("gb-clone-row"));
+  $fixedColumnsHeader.append($thead);
+
   $fixedColumns.append($("<tbody>"));
 
   var colWidths = [];
@@ -382,7 +389,7 @@ GradebookSpreadsheet.prototype.setupFixedColumns = function() {
     colWidths.push($(origCell).find(".gb-cell-inner").outerWidth());
     $th.find(".gb-cell-inner").width(colWidths[i]);
     totalWidth += colWidths[i];
-    $fixedColumnsHeader.find("tr").append($th);
+    $fixedColumnsHeader.find("tr.gb-clone-row").append($th);
   });
 
   // populate the dummy column table
@@ -634,6 +641,8 @@ GradebookSpreadsheet.prototype.enableGroupByCategory = function() {
   });
 
   self.$table.find("thead").prepend($categoriesRow);
+  self.$spreadsheet.addClass("gb-grouped-by-category");
+  self.refreshFixedTableHeader(true);
 };
 
 
@@ -648,7 +657,14 @@ GradebookSpreadsheet.prototype.disableGroupByCategory = function() {
     model = self.originalOrder[i];
     model.moveColumnTo(newColIndex);
   }
+
+  self.$spreadsheet.removeClass("gb-grouped-by-category");
+  self.refreshFixedTableHeader(true);
 };
+
+GradebookSpreadsheet.prototype.find = function() {
+  return this.$spreadsheet.find.apply(this.$spreadsheet, arguments);
+}
 
 
 /*************************************************************************************
