@@ -19,7 +19,6 @@ function GradebookSpreadsheet($spreadsheet) {
 
 
   // set it all up
-  this.setupWicketAJAXEventHandler();
   this.setupGradeItemCellModels();
   this.enableAbsolutePositionsInCells();
   this.setupKeyboadNavigation();
@@ -32,29 +31,18 @@ function GradebookSpreadsheet($spreadsheet) {
 };
 
 
-GradebookSpreadsheet.prototype.setupWicketAJAXEventHandler = function() {
-  var self = this;
-
-  // When Wicket AJAX loads in some new content, notify the cell's model accordingly.
-  Wicket.Event.subscribe('/ajax/call/complete', function(jqEvent, attributes, jqXHR, errorThrown, textStatus) {
-    var $target = $(attributes.event.target);
-
-    if ($target.closest(".gb-grade-item-cell").length == 0) {
-      // this ajax doesn't have anything to do with grades... ABORT
-      return true;
-    }
-
+GradebookSpreadsheet.prototype.getCellModelForWicketParams = function(wicketExtraParameters) {
     var extraParameters = {};
 
-    if (attributes.ep) {
-      attributes.ep.map(function(o, i) {
-        extraParameters[o.name] = o.value;
-      });
+    if (!wicketExtraParameters) {
+      return;
     }
 
-    var model = self.getCellModelForStudentAndAssignment(extraParameters.studentUuid, extraParameters.assignmentId);
-    model.handleWicketEvent(jqEvent, attributes, jqXHR, errorThrown, textStatus, extraParameters);
-  });
+    wicketExtraParameters.map(function(o, i) {
+      extraParameters[o.name] = o.value;
+    });
+
+    return this.getCellModelForStudentAndAssignment(extraParameters.studentUuid, extraParameters.assignmentId);
 };
 
 
@@ -850,25 +838,10 @@ function GradebookEditableCell($cell, header, gradebookSpreadsheet) {
 };
 
 
-GradebookEditableCell.prototype.handleWicketEvent = function(jqEvent, attributes, jqXHR, error, status, ep) {
-  var self = this;
-  if (self.isEditingMode()) {
-    self.setupWicketInputField(self.$cell.data("initialValue"));
-  } else {
-    self.setupWicketLabelField();
-  }
-};
-
-
 GradebookEditableCell.prototype.setupWicketLabelField = function() {
   this.$cell.data("initialValue", null);
   this.$cell.data("wicket_input_initialized", false).removeClass("gb-cell-editing");
   this.$cell.data("wicket_label_initialized", true);
-};
-
-
-GradebookEditableCell.prototype.isEditingMode = function() {
-  return this.$cell.find(".gb-grade-item-cell :input:first").length > 0;
 };
 
 
@@ -963,6 +936,33 @@ GradebookEditableCell.prototype.show = function() {
 
 GradebookEditableCell.prototype.hide = function() {
   this.$cell.hide();
+};
+
+
+GradebookEditableCell.prototype.getStudentName = function() {
+  return this.$cell.closest("tr").find(".gb-student-cell").text().trim();
+};
+
+
+GradebookEditableCell.prototype.handleBeforeSave = function() {
+  this.$cell.addClass("gb-cell-saving");
+};
+
+
+GradebookEditableCell.prototype.handleSaveSuccess = function() {
+  // show contextual success notification
+  console.log("SUCCESS");
+};
+
+
+GradebookEditableCell.prototype.handleSaveComplete = function() {
+  this.$cell.removeClass("gb-cell-saving");
+  this.setupWicketLabelField();
+};
+
+
+GradebookEditableCell.prototype.handleEditSuccess = function() {
+  this.setupWicketInputField(this.$cell.data("initialValue"));
 };
 
 
@@ -1373,8 +1373,42 @@ GradebookAPI._POST = function(url, data, onSuccess, onError) {
 
 
 /**************************************************************************************
+ * GradebookWicketEventProxy - proxy any Wicket events to the Gradebook Spreadsheet
+ */
+
+GradebookWicketEventProxy = {
+  updateLabel : {
+    handleBeforeSend: $.noop, // function(componentId, attrs, jqXHR, settings) {}
+    handleSuccess: function(componentId, attrs, jqXHR, data, textStatus) {
+      var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
+      model.handleEditSuccess && model.handleEditSuccess();
+    },
+    handleFailure: $.noop, // function(componentId, attrs, jqXHR, errorMessage, textStatus) {}
+    handleComplete: $.noop // function(componentId, attrs, jqXHR, textStatus) {}
+  },
+  updateEditor : {
+    handleBeforeSend: function(componentId, attrs, jqXHR, settings) {
+      var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
+      model.handleBeforeSave && model.handleBeforeSave();
+    },
+    handleSuccess: function(componentId, attrs, jqXHR, data, textStatus) {
+      var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
+      model.handleSaveSuccess && model.handleSaveSuccess();
+    },
+    handleFailure: $.noop, // function(componentId, attrs, jqXHR, errorMessage, textStatus) {}
+    handleComplete: function(componentId, attrs, jqXHR, textStatus) {
+      var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
+      model.handleSaveComplete && model.handleSaveComplete();
+    }
+  },
+};
+
+
+/**************************************************************************************
  * Let's initialize our GradebookSpreadsheet 
  */
 $(function() {
-  var myGradebookSpreadsheet = new GradebookSpreadsheet($("#gradebookGrades"));
+  sakai.gradebookng = {
+    spreadsheet: new GradebookSpreadsheet($("#gradebookGrades"))
+  };
 });
