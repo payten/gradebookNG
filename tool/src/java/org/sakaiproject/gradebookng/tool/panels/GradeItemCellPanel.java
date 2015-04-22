@@ -141,21 +141,21 @@ public class GradeItemCellPanel extends Panel {
 					AjaxCallListener myAjaxCallListener = new AjaxCallListener() {
 						@Override
 						public CharSequence getBeforeSendHandler(Component component) {
-							return "GradebookWicketEventProxy.updateLabel.handleBeforeSend('" + component.getMarkupId() + "', attrs, jqXHR, settings);";
+							return "GradebookWicketEventProxy.updateLabel.handleBeforeSend('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, settings);";
 						}
 
 						@Override
 						public CharSequence getSuccessHandler(Component component) {
-							return "GradebookWicketEventProxy.updateLabel.handleSuccess('" + component.getMarkupId() + "', attrs, jqXHR, data, textStatus);";
+							return "GradebookWicketEventProxy.updateLabel.handleSuccess('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, data, textStatus);";
 						}
 
 						@Override
 						public CharSequence getFailureHandler(Component component) {
-							return "GradebookWicketEventProxy.updateLabel.handleFailure('" + component.getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
+							return "GradebookWicketEventProxy.updateLabel.handleFailure('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
 						}
 						@Override
 						public CharSequence getCompleteHandler(Component component) {
-							return "GradebookWicketEventProxy.updateLabel.handleComplete('" + component.getMarkupId() + "', attrs, jqXHR, textStatus);";
+							return "GradebookWicketEventProxy.updateLabel.handleComplete('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, textStatus);";
 						}
 					};
 					attributes.getAjaxCallListeners().add(myAjaxCallListener);
@@ -171,21 +171,21 @@ public class GradeItemCellPanel extends Panel {
 					AjaxCallListener myAjaxCallListener = new AjaxCallListener() {
 						@Override
 						public CharSequence getBeforeSendHandler(Component component) {
-							return "GradebookWicketEventProxy.updateEditor.handleBeforeSend('" + component.getMarkupId() + "', attrs, jqXHR, settings);";
+							return "GradebookWicketEventProxy.updateEditor.handleBeforeSend('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, settings);";
 						}
 
 						@Override
 						public CharSequence getSuccessHandler(Component component) {
-							return "GradebookWicketEventProxy.updateEditor.handleSuccess('" + component.getMarkupId() + "', attrs, jqXHR, data, textStatus);";
+							return "GradebookWicketEventProxy.updateEditor.handleSuccess('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, data, textStatus);";
 						}
 
 						@Override
 						public CharSequence getFailureHandler(Component component) {
-							return "GradebookWicketEventProxy.updateEditor.handleFailure('" + component.getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
+							return "GradebookWicketEventProxy.updateEditor.handleFailure('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
 						}
 						@Override
 						public CharSequence getCompleteHandler(Component component) {
-							return "GradebookWicketEventProxy.updateEditor.handleComplete('" + component.getMarkupId() + "', attrs, jqXHR, textStatus);";
+							return "GradebookWicketEventProxy.updateEditor.handleComplete('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, textStatus);";
 						}
 					};
 					attributes.getAjaxCallListeners().add(myAjaxCallListener);

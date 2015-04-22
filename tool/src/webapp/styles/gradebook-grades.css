@@ -143,8 +143,9 @@
   text-align: right;
   width: 40px;
   line-height: 1em;
+  display: inline;
 }
-#gradebookGrades .gb-grade-item-column-cell .gb-out-of {
+#gradebookGrades .gb-grade-item-cell .gb-out-of {
   display: inline;
   padding-left: 6px;
   font-size: 0.9em;

@@ -20,7 +20,6 @@ function GradebookSpreadsheet($spreadsheet) {
 
   // set it all up
   this.setupGradeItemCellModels();
-  this.enableAbsolutePositionsInCells();
   this.setupKeyboadNavigation();
   this.setupFixedColumns();
   this.setupFixedTableHeader();
@@ -57,8 +56,6 @@ GradebookSpreadsheet.prototype.setupGradeItemCellModels = function() {
     var model = new GradebookHeaderCell($cell, self);
 
     tmpHeaderByIndex.push(model);
-
-    $cell.data("model", model);
   });
 
 
@@ -81,8 +78,6 @@ GradebookSpreadsheet.prototype.setupGradeItemCellModels = function() {
       } else {
         cellModel = new GradebookBasicCell($cell, tmpHeaderByIndex[cellIndex], self);
       }
-
-      $cell.data("model", cellModel);
     });
   });
 };
@@ -90,14 +85,6 @@ GradebookSpreadsheet.prototype.setupGradeItemCellModels = function() {
 
 GradebookSpreadsheet.prototype.setupKeyboadNavigation = function() {
   var self = this;
-
-  // make all table header and body cells tabable
-  self.$table.find("thead th, tbody td").
-                      attr("tabindex", 0).
-                      addClass("gb-cell").
-                      on("focus", function(event) {
-                        self.ensureCellIsVisible($(event.target));
-                      });
 
   self.$table.
     on("keydown", function(event) {
@@ -554,19 +541,6 @@ GradebookSpreadsheet.prototype.proxyEventToElementsInOriginalCell = function(eve
 };
 
 
-GradebookSpreadsheet.prototype.enableAbsolutePositionsInCells = function() {
-  // as HTML tables don't normally allow position:absolute, innerWrap all cells
-  // with a div that provide the block level element to contain an absolutely
-  // positioned child node.
-  this.$table.find("th,td").each(function() {
-    var $cell = $(this);
-    var $wrapDiv = $("<div>").addClass("gb-cell-inner");
-    $wrapDiv.height($cell.height());
-    $cell.wrapInner($wrapDiv);
-  });
-};
-
-
 GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
   var self = this;
 
@@ -828,14 +802,46 @@ GradebookSpreadsheet.prototype.refreshSummary = function() {
 
 
 /*************************************************************************************
+ * AbstractCell - behaviour inherited by all cells
+ */
+var GradebookAbstractCell = {
+  setupCell: function($cell) {
+    this.$cell = $cell;
+    $cell.data("model", this);
+    this.setupAbsolutePositioning();
+    this.makeCellTabbable();
+  },
+  setupAbsolutePositioning: function() {
+    // as HTML tables don't normally allow position:absolute, innerWrap all cells
+    // with a div that provide the block level element to contain an absolutely
+    // positioned child node.
+    var $wrapDiv = $("<div>").addClass("gb-cell-inner");
+    $wrapDiv.height(this.$cell.height());
+    this.$cell.wrapInner($wrapDiv);
+  },
+  makeCellTabbable: function() {
+    var self = this;
+    self.$cell.attr("tabindex", 0).
+               addClass("gb-cell").
+               on("focus", function(event) {
+                 self.gradebookSpreadsheet.ensureCellIsVisible($(event.target));
+               });
+  }
+};
+
+/*************************************************************************************
  * GradebookEditableCell - behaviour for editable cells
  */
 function GradebookEditableCell($cell, header, gradebookSpreadsheet) {
-  this.$cell = $cell;
   this.header = header;
   this.gradebookSpreadsheet = gradebookSpreadsheet;
   this.$spreadsheet = gradebookSpreadsheet.$spreadsheet;
+
+  this.setupCell($cell);
 };
+
+
+GradebookEditableCell.prototype = Object.create(GradebookAbstractCell);
 
 
 GradebookEditableCell.prototype.setupWicketLabelField = function() {
@@ -885,7 +891,7 @@ GradebookEditableCell.prototype.setupWicketInputField = function(withValue) {
     return;
   }
 
-  var $input = self.$cell.find(".gb-grade-item-cell :input:first");
+  var $input = self.$cell.find(":input:first");
 
   if (withValue != null) {
     // set the value after the focus to ensure the cursor is
@@ -906,6 +912,7 @@ GradebookEditableCell.prototype.setupWicketInputField = function(withValue) {
 
   self.$cell.data("wicket_input_initialized", true).addClass("gb-cell-editing");
   self.$cell.data("wicket_label_initialized", false);
+  console.log(self.$cell.html());
 };
 
 
@@ -925,7 +932,7 @@ GradebookEditableCell.prototype.enterEditMode = function(withValue) {
   self.$cell.data("initialValue", withValue);
 
   // Trigger click on the Wicket node so we enter the edit mode
-  self.$cell.find(".gb-grade-item-cell span").trigger("click");
+  self.$cell.find("span[id^='label']").trigger("click");
 };
 
 
@@ -949,14 +956,10 @@ GradebookEditableCell.prototype.handleBeforeSave = function() {
 };
 
 
-GradebookEditableCell.prototype.handleSaveSuccess = function() {
-  // show contextual success notification
-  console.log("SUCCESS");
-};
-
-
-GradebookEditableCell.prototype.handleSaveComplete = function() {
-  this.$cell.removeClass("gb-cell-saving");
+GradebookEditableCell.prototype.handleSaveComplete = function(cellId) {
+  // The cell has been replaced by Wicket, so replace with the new 
+  // DOM node on the model and set it up
+  this.setupCell($("#"+cellId));
   this.setupWicketLabelField();
 };
 
@@ -970,10 +973,14 @@ GradebookEditableCell.prototype.handleEditSuccess = function() {
  * GradebookBasicCell basic cell with basic functions
  */
 function GradebookBasicCell($cell, header, gradebookSpreadsheet) {
-  this.$cell = $cell;
   this.header = header;
   this.gradebookSpreadsheet = gradebookSpreadsheet;
+
+  this.setupCell($cell);
 };
+
+
+GradebookBasicCell.prototype = Object.create(GradebookAbstractCell);
 
 
 GradebookBasicCell.prototype.getRow = function() {
@@ -990,12 +997,16 @@ GradebookBasicCell.prototype.isEditable = function() {
  * GradebookHeaderCell basic header cell with basic functions
  */
 function GradebookHeaderCell($cell, gradebookSpreadsheet) {
-  this.$cell = $cell;
   this.gradebookSpreadsheet = gradebookSpreadsheet;
-  this.setColumnKey();
 
+  this.setupCell($cell);
+
+  this.setColumnKey();
   this.truncateTitle();
 };
+
+
+GradebookHeaderCell.prototype = Object.create(GradebookAbstractCell);
 
 
 GradebookHeaderCell.prototype.getRow = function() {
@@ -1378,27 +1389,24 @@ GradebookAPI._POST = function(url, data, onSuccess, onError) {
 
 GradebookWicketEventProxy = {
   updateLabel : {
-    handleBeforeSend: $.noop, // function(componentId, attrs, jqXHR, settings) {}
-    handleSuccess: function(componentId, attrs, jqXHR, data, textStatus) {
+    handleBeforeSend: $.noop, // function(cellId, attrs, jqXHR, settings) {}
+    handleSuccess: function(cellId, attrs, jqXHR, data, textStatus) {
       var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
       model.handleEditSuccess && model.handleEditSuccess();
     },
-    handleFailure: $.noop, // function(componentId, attrs, jqXHR, errorMessage, textStatus) {}
-    handleComplete: $.noop // function(componentId, attrs, jqXHR, textStatus) {}
+    handleFailure: $.noop, // function(cellId, attrs, jqXHR, errorMessage, textStatus) {}
+    handleComplete: $.noop // function(cellId, attrs, jqXHR, textStatus) {}
   },
   updateEditor : {
-    handleBeforeSend: function(componentId, attrs, jqXHR, settings) {
+    handleBeforeSend: function(cellId, attrs, jqXHR, settings) {
       var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
       model.handleBeforeSave && model.handleBeforeSave();
     },
-    handleSuccess: function(componentId, attrs, jqXHR, data, textStatus) {
+    handleSuccess: $.noop, // function(cellId, attrs, jqXHR, data, textStatus) {}
+    handleFailure: $.noop, // function(cellId, attrs, jqXHR, errorMessage, textStatus) {}
+    handleComplete: function(cellId, attrs, jqXHR, textStatus) {
       var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
-      model.handleSaveSuccess && model.handleSaveSuccess();
-    },
-    handleFailure: $.noop, // function(componentId, attrs, jqXHR, errorMessage, textStatus) {}
-    handleComplete: function(componentId, attrs, jqXHR, textStatus) {
-      var model = sakai.gradebookng.spreadsheet.getCellModelForWicketParams(attrs.ep);
-      model.handleSaveComplete && model.handleSaveComplete();
+      model.handleSaveComplete && model.handleSaveComplete(cellId);
     }
   },
 };
