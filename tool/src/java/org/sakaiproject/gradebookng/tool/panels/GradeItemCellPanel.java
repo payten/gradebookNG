@@ -74,6 +74,7 @@ public class GradeItemCellPanel extends Panel {
 					//set original grade, once only
 					super.onInitialize();
 					this.originalGrade = this.getLabel().getDefaultModelObjectAsString();
+					this.addSpecialAttributes();
 				}
 				
 				@Override
@@ -149,10 +150,15 @@ public class GradeItemCellPanel extends Panel {
 				public void setOriginalGrade(String grade) {
 					this.originalGrade = grade;
 				}
-				
-				
+
+				private void addSpecialAttributes() {
+					Component parentCell = getParentCellFor(this);
+					parentCell.add(new AttributeModifier("data-assignmentid", assignmentId));
+					parentCell.add(new AttributeModifier("data-studentuuid", studentUuid));
+					parentCell.add(new AttributeModifier("class", "gb-grade-item-cell"));
+				}
 			};
-			
+
 			gradeCell.setType(String.class);
 			
 			gradeCell.setOutputMarkupId(true);
@@ -175,17 +181,20 @@ public class GradeItemCellPanel extends Panel {
 	}
 	
 	private void markSuccessful(Component gradeCell) {
-		gradeCell.getParent().getParent().add(AttributeModifier.replace("class", "gb-grade-item-header gradeSaveSuccess"));
+		getParentCellFor(gradeCell).add(AttributeModifier.replace("class", "gb-grade-item-cell gradeSaveSuccess"));
 		//TODO attach a timeout here
 	}
 	
 	private void markError(Component gradeCell) {
-		gradeCell.getParent().getParent().add(AttributeModifier.replace("class", "gb-grade-item-header gradeSaveError"));
+		getParentCellFor(gradeCell).add(AttributeModifier.replace("class", "gb-grade-item-cell gradeSaveError"));
 	}
 	
 	private void markWarning(Component gradeCell) {
-		gradeCell.getParent().getParent().add(AttributeModifier.replace("class", "gb-grade-item-header gradeSaveWarning"));
+		getParentCellFor(gradeCell).add(AttributeModifier.replace("class", "gb-grade-item-cell gradeSaveWarning"));
+	}
+
+	private Component getParentCellFor(Component gradeCell) {
+		return gradeCell.getParent().getParent();
 	}
 	
-
 }

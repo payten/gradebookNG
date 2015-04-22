@@ -39,7 +39,7 @@ GradebookSpreadsheet.prototype.setupWicketAJAXEventHandler = function() {
   Wicket.Event.subscribe('/ajax/call/complete', function(jqEvent, attributes, jqXHR, errorThrown, textStatus) {
     var $target = $(attributes.event.target);
 
-    if ($target.closest(".gb-item-grade").length == 0) {
+    if ($target.closest(".gb-grade-item-cell").length == 0) {
       // this ajax doesn't have anything to do with grades... ABORT
       return true;
     }
@@ -272,7 +272,7 @@ GradebookSpreadsheet.prototype.ensureCellIsVisible = function($cell) {
 
 
 GradebookSpreadsheet.prototype.isCellEditable = function($cell) {
-  return $cell.has(".gb-item-grade").length > 0;
+  return $cell.hasClass("gb-grade-item-cell");
 };
 
 
@@ -402,7 +402,7 @@ GradebookSpreadsheet.prototype.setupFixedColumns = function() {
   var $fixedColumnsHeader = $("<table>").attr("class", self.$table.attr("class")).addClass("gb-fixed-column-headers-table").hide();
   var $fixedColumns = $("<table>").attr("class", self.$table.attr("class")).addClass("gb-fixed-columns-table").hide();
 
-  var $headers = self.$table.find("thead th:not(.gb-grade-item-header)");
+  var $headers = self.$table.find("thead th:not(.gb-grade-item-column-cell)");
   var $thead = $("<thead>");
   // append a dummy header row for when categorised
   $thead.append($("<tr>").addClass("gb-categories-row").append($("<td>").attr("colspan", $headers.length)));
@@ -618,7 +618,7 @@ GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
     }
   };
 
-  self.find(".gb-grade-item-header").on("mousedown", function() {
+  self.find(".gb-grade-item-column-cell").on("mousedown", function() {
     self.$spreadsheet.data("activeCell", $(this));
     return true;
   });
@@ -626,14 +626,14 @@ GradebookSpreadsheet.prototype.setupColumnDragAndDrop = function() {
   var myDragTable = self.$table.dragtable({
     maxMovingRows: 1,
     clickDelay: 200, // give the user 200ms to perform a click or actually get their drag on
-    dragaccept: '.gb-grade-item-header',
+    dragaccept: '.gb-grade-item-column-cell',
     excludeFooter: true,
     beforeStart: function(dragTable) {
       if (self.isGroupedByCategory()) {
         var scope = self.$spreadsheet.data("activeCell").data("model").categoryDragScope;
         this.dragaccept = "." + scope; // restrict drop to category
       } else {
-        this.dragaccept = ".gb-grade-item-header"; // allow drop anywhere
+        this.dragaccept = ".gb-grade-item-column-cell"; // allow drop anywhere
       }
     },
     beforeStop: function(dragTable) {
@@ -764,7 +764,7 @@ GradebookSpreadsheet.prototype._refreshColumnOrder = function() {
   self._CATEGORIES_MAP = {};
   self._ALL_CATEGORIES = [];
 
-  self._COLUMN_ORDER = self.$table.find("thead tr th.gb-grade-item-header").map(function() {
+  self._COLUMN_ORDER = self.$table.find("thead tr th.gb-grade-item-column-cell").map(function() {
     return $(this).data("model");
   });
 
@@ -802,7 +802,7 @@ GradebookSpreadsheet.prototype.getCategoriesMap = function() {
 
 
 GradebookSpreadsheet.prototype.showGradeItemColumn = function(assignmentId) {
-  var headerModel = this.$table.find("thead .gb-grade-item-header [data-assignmentid='" + assignmentId + "']").closest(".gb-grade-item-header").data("model");
+  var headerModel = this.$table.find("thead .gb-grade-item-column-cell [data-assignmentid='" + assignmentId + "']").closest(".gb-grade-item-column-cell").data("model");
   headerModel.show();
   $.each(this._GRADE_CELLS, function(studentId, assignmentsMap) {
     assignmentsMap[assignmentId].show();
@@ -812,7 +812,7 @@ GradebookSpreadsheet.prototype.showGradeItemColumn = function(assignmentId) {
 
 
 GradebookSpreadsheet.prototype.hideGradeItemColumn = function(assignmentId) {
-  var headerModel = this.$table.find("thead .gb-grade-item-header [data-assignmentid='" + assignmentId + "']").closest(".gb-grade-item-header").data("model");
+  var headerModel = this.$table.find("thead .gb-grade-item-column-cell [data-assignmentid='" + assignmentId + "']").closest(".gb-grade-item-column-cell").data("model");
   headerModel.hide();
   $.each(this._GRADE_CELLS, function(studentId, assignmentsMap) {
     assignmentsMap[assignmentId].hide();
@@ -868,7 +868,7 @@ GradebookEditableCell.prototype.setupWicketLabelField = function() {
 
 
 GradebookEditableCell.prototype.isEditingMode = function() {
-  return this.$cell.find(".gb-item-grade :input:first").length > 0;
+  return this.$cell.find(".gb-grade-item-cell :input:first").length > 0;
 };
 
 
@@ -912,7 +912,7 @@ GradebookEditableCell.prototype.setupWicketInputField = function(withValue) {
     return;
   }
 
-  var $input = self.$cell.find(".gb-item-grade :input:first");
+  var $input = self.$cell.find(".gb-grade-item-cell :input:first");
 
   if (withValue != null) {
     // set the value after the focus to ensure the cursor is
@@ -952,7 +952,7 @@ GradebookEditableCell.prototype.enterEditMode = function(withValue) {
   self.$cell.data("initialValue", withValue);
 
   // Trigger click on the Wicket node so we enter the edit mode
-  self.$cell.find(".gb-item-grade span").trigger("click");
+  self.$cell.find(".gb-grade-item-cell span").trigger("click");
 };
 
 
@@ -1012,7 +1012,7 @@ GradebookHeaderCell.prototype.setColumnKey = function() {
   var self = this;
 
   var columnKey;
-  if (self.$cell.hasClass("gb-grade-item-header")) {
+  if (self.$cell.hasClass("gb-grade-item-column-cell")) {
     columnKey = self.$cell.find("[data-assignmentid]").data("assignmentid");
   } else if (self.$cell.find(".gb-title").length > 0) {
     columnKey = self.$cell.find(".gb-title").text().trim();
@@ -1026,7 +1026,7 @@ GradebookHeaderCell.prototype.setColumnKey = function() {
 
 
 GradebookHeaderCell.prototype.getTitle = function() {
-  if (self.$cell.hasClass("gb-grade-item-header")) {
+  if (self.$cell.hasClass("gb-grade-item-column-cell")) {
     return this.$cell.find(".gb-title span[title]").attr("title");
   } else {
     throw "getTitle not supported yet";
@@ -1037,7 +1037,7 @@ GradebookHeaderCell.prototype.getTitle = function() {
 GradebookHeaderCell.prototype.truncateTitle = function() {
   var self = this;
 
-  if (self.$cell.hasClass("gb-grade-item-header")) {
+  if (self.$cell.hasClass("gb-grade-item-column-cell")) {
     var $title = self.$cell.find(".gb-title");
     var targetHeight = $title.height();
     if ($title[0].scrollHeight > targetHeight) {
@@ -1060,7 +1060,7 @@ GradebookHeaderCell.prototype.truncateTitle = function() {
 GradebookHeaderCell.prototype.getCategory = function() {
   var category = null;
 
-  if (this.$cell.hasClass("gb-grade-item-header")) {
+  if (this.$cell.hasClass("gb-grade-item-column-cell")) {
     category = this.$cell.find("[data-category]").data("category");
   }
 
