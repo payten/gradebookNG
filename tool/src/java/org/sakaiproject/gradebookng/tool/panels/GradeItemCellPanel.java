@@ -13,12 +13,14 @@ import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.attributes.AjaxCallListener;
 import org.apache.wicket.ajax.attributes.AjaxRequestAttributes;
+import org.apache.wicket.ajax.form.OnChangeAjaxBehavior;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.core.util.string.ComponentRenderer;
 import org.apache.wicket.extensions.ajax.markup.html.AjaxEditableLabel;
 import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.panel.FeedbackPanel;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
@@ -45,7 +47,7 @@ public class GradeItemCellPanel extends Panel {
 	IModel<Map<String,Object>> model;
 	Map<String,Object> modelData;
 	
-	AjaxEditableLabel<String> gradeCell;
+	TextField<String> gradeCell;
 	
 	String comment;
 	GradeCellSaveStyle gradeSaveStyle;
@@ -114,7 +116,62 @@ public class GradeItemCellPanel extends Panel {
 			
 			
 		} else {
-			gradeCell = new AjaxEditableLabel<String>("grade", Model.of(formattedGrade)) {
+			gradeCell = new TextField<String>("grade", Model.of(formattedGrade));
+			gradeCell.add(new OnChangeAjaxBehavior() {
+					private static final long serialVersionUID = 2462233190993745889L;
+					private String originalGrade = null;
+
+					@Override
+					protected void onUpdate(final AjaxRequestTarget target) {
+						final String newGrade = ((TextField<String>) getComponent()).getModelObject();
+
+						//perform validation here so we can bypass the backend
+						DoubleValidator validator = new DoubleValidator();
+
+						if(!validator.isValid(newGrade)) {
+							markWarning(gradeCell);
+							//TODO add the message
+						} else {
+
+							//for concurrency, get the original grade we have in the UI and pass it into the service as a check
+							GradeSaveResponse result = businessService.saveGrade(assignmentId, studentUuid, this.originalGrade, newGrade, comment);
+
+							//TODO here, add the message
+							switch (result) {
+								case OK:
+									markSuccessful(gradeCell);
+									break;
+								case ERROR:
+									markError(gradeCell);
+									//TODO fix this message
+									error("oh dear");
+									break;
+								case OVER_LIMIT:
+									markOverLimit(gradeCell);
+									break;
+								case NO_CHANGE:
+									//do nothing
+									break;
+								case CONCURRENT_EDIT:
+									markError(gradeCell);
+									//TODO fix this message
+									error("concurrent edit, eep");
+									notifications.add(GradeCellNotification.CONCURRENT_EDIT);
+									break;
+								default:
+									throw new UnsupportedOperationException("The response for saving the grade is unknown.");
+							}
+						}
+
+						//refresh the components we need
+						target.addChildren(getPage(), FeedbackPanel.class);
+						//target.add(getParentCellFor(this));
+						//target.add(this);
+
+						refreshPopoverNotifications();
+					}
+				});
+/*			gradeCell = new AjaxEditableLabel<String>("grade", Model.of(formattedGrade)) {
 				
 				private static final long serialVersionUID = 1L;
 				
@@ -278,7 +335,7 @@ public class GradeItemCellPanel extends Panel {
 					parentCell.add(new AttributeModifier("class", "gb-grade-item-cell"));
 					parentCell.setOutputMarkupId(true); //must output so we can manipulate the classes through ajax
 				}
-			};
+			};*/
 
 			gradeCell.setType(String.class);
 						
