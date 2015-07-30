@@ -13,6 +13,7 @@ import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.attributes.AjaxCallListener;
 import org.apache.wicket.ajax.attributes.AjaxRequestAttributes;
+import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
 import org.apache.wicket.ajax.form.OnChangeAjaxBehavior;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.core.util.string.ComponentRenderer;
@@ -116,11 +117,32 @@ public class GradeItemCellPanel extends Panel {
 			
 			
 		} else {
-			gradeCell = new TextField<String>("grade", Model.of(formattedGrade));
-			gradeCell.add(new OnChangeAjaxBehavior() {
-					private static final long serialVersionUID = 2462233190993745889L;
-					private String originalGrade = null;
+			gradeCell = new TextField<String>("grade", Model.of(formattedGrade)) {
+				@Override
+				protected void onInitialize() {
+					super.onInitialize();
+					this.addSpecialAttributes();
+				}
 
+				private void addSpecialAttributes() {
+					Component parentCell = getParentCellFor(gradeCell);
+					parentCell.add(new AttributeModifier("data-assignmentid", assignmentId));
+					parentCell.add(new AttributeModifier("data-studentuuid", studentUuid));
+					parentCell.add(new AttributeModifier("class", "gb-grade-item-cell"));
+					parentCell.setOutputMarkupId(true); //must output so we can manipulate the classes through ajax
+				}
+			};
+			gradeCell.add(new AjaxFormComponentUpdatingBehavior("onchange") {
+					private static final long serialVersionUID = 1L;
+
+				private String originalGrade;
+
+				@Override
+					public void onBind() {
+						super.onBind();
+						originalGrade = ((TextField<String>) getComponent()).getDefaultModelObjectAsString();
+					}
+				
 					@Override
 					protected void onUpdate(final AjaxRequestTarget target) {
 						final String newGrade = ((TextField<String>) getComponent()).getModelObject();
@@ -134,12 +156,13 @@ public class GradeItemCellPanel extends Panel {
 						} else {
 
 							//for concurrency, get the original grade we have in the UI and pass it into the service as a check
-							GradeSaveResponse result = businessService.saveGrade(assignmentId, studentUuid, this.originalGrade, newGrade, comment);
+							GradeSaveResponse result = businessService.saveGrade(assignmentId, studentUuid, originalGrade, newGrade, comment);
 
 							//TODO here, add the message
 							switch (result) {
 								case OK:
 									markSuccessful(gradeCell);
+									originalGrade = newGrade;
 									break;
 								case ERROR:
 									markError(gradeCell);
@@ -165,10 +188,48 @@ public class GradeItemCellPanel extends Panel {
 
 						//refresh the components we need
 						target.addChildren(getPage(), FeedbackPanel.class);
-						//target.add(getParentCellFor(this));
-						//target.add(this);
+						target.add(getParentCellFor(gradeCell));
+						target.add(gradeCell);
 
 						refreshPopoverNotifications();
+					}
+
+/*				
+					@Override
+					public CharSequence getCallbackScript() {
+						return "GradebookWicketEventProxy.updateGradeItemCell.handleComplete('" + getParentCellFor(gradeCell).getMarkupId() + "', attrs, jqXHR, textStatus);";
+					}*/
+					@Override
+					protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+						super.updateAjaxAttributes(attributes);
+
+						Map<String,Object> extraParameters = attributes.getExtraParameters();
+						extraParameters.put("assignmentId", assignmentId);
+						extraParameters.put("studentUuid", studentUuid);
+
+						AjaxCallListener myAjaxCallListener = new AjaxCallListener() {
+							@Override
+							public CharSequence getPrecondition(Component component) {
+								return "return GradebookWicketEventProxy.updateGradeItem.handlePrecondition('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs);";
+							}
+							@Override
+							public CharSequence getBeforeSendHandler(Component component) {
+								return "GradebookWicketEventProxy.updateGradeItem.handleBeforeSend('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, settings);";
+							}
+							@Override
+							public CharSequence getSuccessHandler(Component component) {
+								return "GradebookWicketEventProxy.updateGradeItem.handleSuccess('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, data, textStatus);";
+							}
+							@Override
+							public CharSequence getFailureHandler(Component component) {
+								return "GradebookWicketEventProxy.updateGradeItem.handleFailure('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, errorMessage, textStatus);";
+							}
+							@Override
+							public CharSequence getCompleteHandler(Component component) {
+								return "GradebookWicketEventProxy.updateGradeItem.handleComplete('" + getParentCellFor(component.getParent()).getMarkupId() + "', attrs, jqXHR, textStatus);";
+							}
+						};
+						attributes.getAjaxCallListeners().add(myAjaxCallListener);
 					}
 				});
 /*			gradeCell = new AjaxEditableLabel<String>("grade", Model.of(formattedGrade)) {

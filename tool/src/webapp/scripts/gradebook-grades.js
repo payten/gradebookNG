@@ -2047,6 +2047,13 @@ GradebookWicketEventProxy = {
       model.handleSaveComplete && model.handleSaveComplete(cellId);
     }
   },
+  updateGradeItem: {
+    handlePrecondition: $.noop,
+    handleBeforeSend: $.noop,
+    handleSuccess: $.noop,
+    handleFailure: $.noop,
+    handleComplete: $.noop
+  }
 };
 
 

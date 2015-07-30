@@ -209,6 +209,15 @@
   line-height: 1em;
   display: inline;
 }
+#gradebookGrades .gb-grade-item-cell {
+  text-align:center;
+}
+#gradebookGrades .gb-grade-item-cell input {
+    border-color: transparent;
+    background-color: transparent;
+    width: 40px;
+    text-align: center;
+}
 #gradebookGrades .gb-grade-item-cell .gb-out-of {
   display: inline;
   padding-left: 6px;
