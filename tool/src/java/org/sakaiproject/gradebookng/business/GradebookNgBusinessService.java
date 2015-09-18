@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Date;
 
 import javax.xml.bind.JAXBException;
 
@@ -1163,7 +1164,7 @@ public class GradebookNgBusinessService {
       * @param gradebookUid the gradebook that we are interested in
       * @return
       */
-     public List<GbGradeCell> getEditingNotifications(String gradebookUid) {
+     public List<GbGradeCell> getEditingNotifications(String gradebookUid, Date from) {
 		
     	 String currentUserId = this.getCurrentUser().getEid();
     	     	 
@@ -1179,7 +1180,11 @@ public class GradebookNgBusinessService {
     		
     		//join the rest of the maps to get a flat list of GbGradeCells
     		for(Map<String, GbGradeCell> cells : notifications.values()) {
-    			rval.addAll(cells.values());
+    			for (GbGradeCell cell : cells.values()) {
+    				if (cell.getLastUpdated().after(from)) {
+    					rval.add(cell);
+    				}
+    			}
     		}
     		
     	 }

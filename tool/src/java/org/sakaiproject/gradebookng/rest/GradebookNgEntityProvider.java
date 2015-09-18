@@ -1,5 +1,6 @@
 package org.sakaiproject.gradebookng.rest;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -126,7 +127,7 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 	 * @return
 	 */
 	@EntityCustomAction(action = "isotheruserediting", viewKey = EntityView.VIEW_LIST)
-	public List<GbGradeCell> isAnotherUserEditing(EntityView view) {
+	public List<GbGradeCell> isAnotherUserEditing(EntityView view, Map<String, Object> params) {
 		
 		// get siteId
 		String siteId = view.getPathSegment(2);
@@ -138,13 +139,21 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 		}
 		checkValidSite(siteId);
 
+		String epochTimeString = (String) params.get("from");
+		if (StringUtils.isBlank(epochTimeString)) {
+			throw new IllegalArgumentException(
+							"'from' timestamp must be set in order to access notification data.");
+		}
+
+		Date from = new Date((Long.parseLong(epochTimeString)));
+
 		// check instructor
 		checkInstructor(siteId);
 		
 		// get notification list
 		// NOTE we assume the gradebook id and siteid are equivalent, which they are
 		// unless they have two gradebooks in a site? Is that even possible?
-		return this.businessService.getEditingNotifications(siteId);
+		return this.businessService.getEditingNotifications(siteId, from);
 	}
 	
 	

@@ -1053,6 +1053,9 @@ GradebookSpreadsheet.prototype.hideGradeItemAndSyncToolbar = function(assignment
 GradebookSpreadsheet.prototype.setupConcurrencyCheck = function() {
   var self = this;
 
+  // Mark the current time so only notifications received from this time are returned
+  var concurrencyCheckFromTimestamp = (new Date).getTime();
+
   function showConcurrencyNotification(data) {
     $.each(data, function(i, conflict) {
       var model = self.getCellModelForStudentAndAssignment(conflict.studentUuid, conflict.assignmentId);
@@ -1097,7 +1100,7 @@ GradebookSpreadsheet.prototype.setupConcurrencyCheck = function() {
   };
 
   function performConcurrencyCheck() {
-    GradebookAPI.isAnotherUserEditing(self.$table.data("siteid"), handleConcurrencyCheck);
+    GradebookAPI.isAnotherUserEditing(self.$table.data("siteid"), concurrencyCheckFromTimestamp, handleConcurrencyCheck);
   };
 
   // Check for concurrent editors.. and again every 6 seconds
@@ -2079,9 +2082,9 @@ GradebookToolbar.prototype.setupToggleCategories = function() {
 GradebookAPI = {};
 
 
-GradebookAPI.isAnotherUserEditing = function(siteId, onSuccess, onError) {
+GradebookAPI.isAnotherUserEditing = function(siteId, fromTimeMilliSeconds, onSuccess, onError) {
   var endpointURL = "/direct/gbng/isotheruserediting/" + siteId + ".json";
-  GradebookAPI._GET(endpointURL, null, onSuccess, onError);
+  GradebookAPI._GET(endpointURL, {from: fromTimeMilliSeconds}, onSuccess, onError);
 };
 
 
