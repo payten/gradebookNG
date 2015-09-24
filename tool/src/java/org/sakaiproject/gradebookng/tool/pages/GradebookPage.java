@@ -51,6 +51,7 @@ import org.sakaiproject.gradebookng.tool.panels.ToggleGradeItemsToolbarPanel;
 import org.sakaiproject.gradebookng.tool.panels.CourseGradeColumnHeaderPanel;
 import org.sakaiproject.service.gradebook.shared.Assignment;
 import org.sakaiproject.service.gradebook.shared.CategoryDefinition;
+import org.sakaiproject.service.gradebook.shared.CourseGrade;
 
 /**
  * Grades page
@@ -72,6 +73,8 @@ public class GradebookPage extends BasePage {
 	ModalWindow gradeCommentWindow;
 	ModalWindow deleteItemWindow;
 
+	Map<String, Label> courseGradeLabels;
+
 	Form<Void> form;
 
 	@SuppressWarnings({ "rawtypes", "unchecked", "serial" })
@@ -86,6 +89,8 @@ public class GradebookPage extends BasePage {
 		StopWatch stopwatch = new StopWatch();
 		stopwatch.start();
 		Temp.time("GradebookPage init", stopwatch.getTime());
+
+		courseGradeLabels = new HashMap<>();
 
 		form = new Form<Void>("form");
 		add(form);
@@ -253,8 +258,12 @@ public class GradebookPage extends BasePage {
 
                 String courseGrade = studentGradeInfo.getCourseGrade();
 
-                cellItem.add(new Label(componentId, courseGrade));
-                cellItem.setOutputMarkupId(true);
+                Label courseGradeLabel = new Label(componentId, Model.of(courseGrade));
+                courseGradeLabel.setOutputMarkupId(true);
+
+                courseGradeLabels.put(studentGradeInfo.getStudentUuid(), courseGradeLabel);
+
+                cellItem.add(courseGradeLabel);
             }
         });
         
@@ -491,5 +500,10 @@ public class GradebookPage extends BasePage {
 	}
 	
 	
-	
+	public void refreshCourseGradeLabelForStudent(String uuid, AjaxRequestTarget target) {
+		Label label = courseGradeLabels.get(uuid);
+		CourseGrade newCourseGrade = businessService.getCourseGrade(uuid);
+		label.setDefaultModel(Model.of(newCourseGrade.getMappedGrade()));
+		target.add(label);
+	}
 }

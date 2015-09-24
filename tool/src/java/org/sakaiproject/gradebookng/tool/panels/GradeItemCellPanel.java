@@ -193,6 +193,9 @@ public class GradeItemCellPanel extends Panel {
 						this.getLabel().setDefaultModelObject(newGrade);
 					}
 
+					GradebookPage page = (GradebookPage) getPage();
+					page.refreshCourseGradeLabelForStudent(studentUuid, target);
+
 					//refresh the components we need
 					target.addChildren(getPage(), FeedbackPanel.class);
 					target.add(getParentCellFor(this));
